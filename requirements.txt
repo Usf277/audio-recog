@@ -1,0 +1,13 @@
+librosa 
+tensorflow 
+tqdm 
+matplotlib
+sounddevice
+wavio
+Flask
+Flask-SocketIO
+eventlet
+pydub
+flask-cors
+websocket-client
+joblib

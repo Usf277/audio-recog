@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Stream</title>
+</head>
+<body>
+    <h1>Audio Stream to Flask Server</h1>
+    <button id="start">Start Recording</button>
+    <button id="stop" disabled>Stop Recording</button>
+
+    <script>
+        let mediaRecorder;
+        let socket;
+        let audioChunks = [];
+
+        document.getElementById('start').addEventListener('click', async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = event => {
+                audioChunks.push(event.data);
+                if (mediaRecorder.state === "inactive") {
+                    sendData();
+                }
+            };
+
+            mediaRecorder.start(1000); // Record in chunks of 1 second
+
+            // Update WebSocket URL with correct IP address and port
+            socket = new WebSocket('http://192.168.1.2:6000/audio/websocket');
+            socket.onerror = function(error) {
+                console.error('WebSocket Error:', error);
+            };
+            socket.onopen = () => {
+                console.log('WebSocket connection established');
+            };
+
+            document.getElementById('start').disabled = true;
+            document.getElementById('stop').disabled = false;
+        });
+
+        document.getElementById('stop').addEventListener('click', () => {
+            mediaRecorder.stop();
+            document.getElementById('start').disabled = false;
+            document.getElementById('stop').disabled = true;
+        });
+
+        function sendData() {
+            const blob = new Blob(audioChunks, { type: 'audio/pcm' });
+            audioChunks = [];
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(reader.result);
+                }
+            };
+            reader.readAsArrayBuffer(blob);
+        }
+    </script>
+</body>
+</html>
